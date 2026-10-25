@@ -64,7 +64,7 @@ final class DtdcGatewayTest extends TestCase
         self::assertTrue($gateway->cancel('D12345678'));
         self::assertSame(25000, $gateway->rate(self::shipment())[0]->amount);
 
-        $this->expectException(CarrierException::class);
+        $this->expectException(\Omnibus\Exception\RequestNotSupportedException::class); // without its option, not offered
         $this->gateway(false)->track('D12345678');
     }
 }

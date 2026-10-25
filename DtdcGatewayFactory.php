@@ -37,7 +37,7 @@ final class DtdcGatewayFactory extends GatewayFactory
                 return new Api($http, (string) $c['api_key'], (string) $c['customer_code'], $c['tracking_username'] ?: null, $c['tracking_password'] ?: null, (bool) $c['sandbox']);
             },
             'omnibus.action.shipping' => new ShippingAction(),
-            'omnibus.action.tracking' => new TrackingAction(),
+            'omnibus.action.tracking' => static fn (Config $c) => $c['tracking_username'] && $c['tracking_password'] ? new TrackingAction() : null, // the tracking API has a login of its own
             'omnibus.action.cancel' => new CancelAction(),
         ]);
     }

@@ -64,11 +64,20 @@ final class Api
         }
         try {
             if (null === $this->trackingToken) {
-                $this->trackingToken = trim($this->http->request('GET', self::TRACKING_TOKEN, ['query' => ['username' => $this->trackingUsername, 'password' => $this->trackingPassword], 'timeout' => $this->timeout])->getContent(false));
+                $login = $this->http->request('GET', self::TRACKING_TOKEN, ['query' => ['username' => $this->trackingUsername, 'password' => $this->trackingPassword], 'timeout' => $this->timeout]);
+                if ($login->getStatusCode() >= 400) {
+                    throw new CarrierException('dtdc', sprintf('DTDC gave no tracking token (HTTP %d): check the tracking username and password.', $login->getStatusCode()));
+                }
+                $this->trackingToken = trim($login->getContent(false));
             }
-            $data = $this->http->request('POST', self::TRACKING, ['headers' => ['X-Access-Token' => $this->trackingToken, 'Content-Type' => 'application/json'], 'body' => json_encode(['trkType' => 'cnno', 'strcnno' => $number, 'addtnlDtl' => 'Y']), 'timeout' => $this->timeout])->toArray(false);
+            $response = $this->http->request('POST', self::TRACKING, ['headers' => ['X-Access-Token' => $this->trackingToken, 'Content-Type' => 'application/json'], 'body' => json_encode(['trkType' => 'cnno', 'strcnno' => $number, 'addtnlDtl' => 'Y']), 'timeout' => $this->timeout]);
+            $status = $response->getStatusCode();
+            $data = $response->toArray(false);
         } catch (HttpExceptionInterface $e) {
             throw new CarrierException('dtdc', 'DTDC tracking failed: '.$e->getMessage(), null, $e);
+        }
+        if ($status >= 400) {
+            throw new CarrierException('dtdc', (string) ($data['errorDetails'][0]['value'] ?? $data['message'] ?? sprintf('DTDC tracking answered HTTP %d.', $status)));
         }
         if ('FALSE' === strtoupper((string) ($data['statusFlag'] ?? 'TRUE')) && empty($data['trackHeader'])) {
             throw new CarrierException('dtdc', (string) ($data['errorDetails'][0]['value'] ?? 'DTDC knows no such consignment.'));
