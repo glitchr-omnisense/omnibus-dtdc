@@ -110,6 +110,9 @@ from the header's `strStatus` text, else the latest event's. A status, in this o
 "not delivered" and "undelivered" contain `delivered`, which the first row catches: such an event
 reads as `DELIVERED`, whatever its code.
 
+> [!WARNING]
+> Known defect: "not delivered" and "undelivered" read `DELIVERED`, even with code `NDL` or `UND`, where they are an `EXCEPTION`.
+
 **Cancel.** `POST /consignment/cancel` with the number and the customer code: `true` when no
 number is listed as failed and the status is `OK` (or absent).
 
