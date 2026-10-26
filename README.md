@@ -1,6 +1,6 @@
 # omnibus/dtdc
 
-DTDC for [omniscient/omnibus](https://github.com/glitchr-studio/omnibus): consignments with their
+DTDC for [omnisense/omnibus](https://github.com/glitchr-omnisense/omnibus): consignments with their
 labels and cancellation through DTDC's customer integration API (an api-key), tracking through
 DTDC's tracking API (its own login). Prices come from configuration (`rates`): DTDC quotes by
 contract.
@@ -9,7 +9,7 @@ contract.
 $gateway = (new DtdcGatewayFactory($http))->create($options);   // $http: the application's HTTP client - none given, the factory makes its own; the options below
 ```
 
-No framework needed: the package requires `omniscient/omnibus` and `symfony/http-client`. In a
+No framework needed: the package requires `omnisense/omnibus` and `symfony/http-client`. In a
 Symfony application, the same through the bundle's configuration:
 
 ```yaml

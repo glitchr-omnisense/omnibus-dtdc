@@ -1,6 +1,6 @@
 # omnibus/dtdc
 
-DTDC for [omniscient/omnibus](https://github.com/glitchr-studio/omnibus): consignments with their
+DTDC for [omnisense/omnibus](https://github.com/glitchr-omnisense/omnibus): consignments with their
 PDF labels and cancellation through DTDC's customer integration API (an `api-key`), tracking
 through DTDC's tracking API (a login of its own). DTDC quotes by contract: prices come from the
 `rates` option. The gateway calls:
@@ -23,7 +23,7 @@ Integration paths are under `https://dtdcapi.shipsy.io/api/customer/integration`
 composer require omnibus/dtdc
 ```
 
-Requires PHP 8.2, `omniscient/omnibus` (2.x) and `symfony/http-client` (6.4, 7 or 8); given no
+Requires PHP 8.2, `omnisense/omnibus` (2.x) and `symfony/http-client` (6.4, 7 or 8); given no
 HTTP client, the factory makes one with `HttpClient::create()`. In a Symfony application with
 `Omnibus\Bridge\Symfony\OmnibusBundle`, the factory is registered as soon as the package is
 installed.
@@ -45,7 +45,7 @@ A DTDC business account; DTDC's integration team gives (the demo environment fir
 | `tracking_username` | ?string | `null` | no | the tracking API's username |
 | `tracking_password` | ?string | `null` | no | the tracking API's password |
 | `sandbox` | bool | `false` | no | `true`: the demo integration environment |
-| `rates` | list | - | no | the only way this gateway rates ([the rates option](https://github.com/glitchr-studio/omnibus/blob/2.x/docs/configuration.md#the-rates-option)) |
+| `rates` | list | - | no | the only way this gateway rates ([the rates option](https://github.com/glitchr-omnisense/omnibus/blob/2.x/docs/configuration.md#the-rates-option)) |
 
 Shipment options read when booking (`Shipment::$options`):
 
