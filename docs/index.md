@@ -95,23 +95,29 @@ username and password in the query string; the token is kept for the gateway's l
 tracking request (`trkType cnno`, additional details) sends it as `X-Access-Token`. Each detail:
 `strActionDate` and `strActionTime` read as `dmY Hi` (an unreadable date is dated now), the action
 as description, the origin as location, the code as `code`; sorted oldest first. The status is read
-from the header's `strStatus` text, else the latest event's. A status, in this order:
+from the header's `strStatus` text, else the latest event's. A status: DTDC's code first,
 
-| Code | Or the text contains | `TrackingStatus` |
-|---|---|---|
-| `DLV` | `delivered` | `DELIVERED` |
-| `OFD` | `out for delivery` | `OUT_FOR_DELIVERY` |
-| `RTO` | `return` | `RETURNED` |
-| `NDL`, `UND` | `not delivered`, `undelivered` | `EXCEPTION` |
-| `BKD` | `booked`, `softdata` | `PENDING` |
-| any other code, or any other text | | `IN_TRANSIT` |
-| neither | | `UNKNOWN` |
+| Code | `TrackingStatus` |
+|---|---|
+| `DLV` | `DELIVERED` |
+| `NDL`, `UND` | `EXCEPTION` |
+| `OFD` | `OUT_FOR_DELIVERY` |
+| `RTO` | `RETURNED` |
+| `BKD` | `PENDING` |
 
-"not delivered" and "undelivered" contain `delivered`, which the first row catches: such an event
-reads as `DELIVERED`, whatever its code.
+then, for any other code or none, the text, in this order:
 
-> [!WARNING]
-> Known defect: "not delivered" and "undelivered" read `DELIVERED`, even with code `NDL` or `UND`, where they are an `EXCEPTION`.
+| The text contains | `TrackingStatus` |
+|---|---|
+| `not delivered`, `undelivered` | `EXCEPTION` |
+| `delivered` | `DELIVERED` |
+| `out for delivery` | `OUT_FOR_DELIVERY` |
+| `return` | `RETURNED` |
+| `booked`, `softdata` | `PENDING` |
+| anything else, or any other code | `IN_TRANSIT` |
+| neither a code nor a text | `UNKNOWN` |
+
+"not delivered" and "undelivered" are read before "delivered", which they contain.
 
 **Cancel.** `POST /consignment/cancel` with the number and the customer code: `true` when no
 number is listed as failed and the status is `OK` (or absent).
@@ -205,7 +211,8 @@ its login, `Pickup`, `GetSlip`, `Paperless`, and `Rating` without `rates`, raise
 
 Tested offline: `Tests/DtdcGatewayTest.php` (a consignment booked on the demo host with the
 `api-key` header, the customer code, the service type and the PIN code, its label fetched by
-reference number; tracking with its own token and the delivered status; the cancellation;
+reference number; tracking with its own token and the delivered status; `NDL` and `UND` events, "Not Delivered"
+and "Undelivered", read as exceptions; the cancellation;
 configured rates) and `Tests/DtdcContractTest.php`, the family's conformance suite on recorded
 answers (`Tracking` supported only with its login). The example above was run in the core's
 harness on those recorded answers.

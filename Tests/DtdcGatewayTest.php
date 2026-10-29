@@ -16,6 +16,8 @@ final class DtdcGatewayTest extends TestCase
 {
     private array $calls = [];
 
+    private ?array $trackDetails = null;
+
     private static function shipment(): Shipment
     {
         return new Shipment(new Address('Glitch Art', ['Nariman Point'], '400021', 'Mumbai', 'IN', phone: '02212345678'), new Address('Alex Martin', ['MG Road'], '560001', 'Bengaluru', 'IN', phone: '9876543210'), [new Parcel(1500, 30, 20, 10, 150000, 'INR')], reference: 'ORDER-1042');
@@ -32,7 +34,7 @@ final class DtdcGatewayTest extends TestCase
                 str_ends_with($path, '/consignment/label') => new MockResponse(json_encode(['status' => 'OK', 'data' => [['label' => base64_encode('%PDF-1.4 dtdc')]]])),
                 str_ends_with($path, '/consignment/cancel') => new MockResponse(json_encode(['status' => 'OK', 'successAWBNo' => ['D12345678'], 'failedAWBNo' => []])),
                 str_ends_with($path, '/authenticate') => new MockResponse('tracking-token'),
-                str_ends_with($path, '/getTrackDetails') => new MockResponse(json_encode(['statusFlag' => true, 'trackHeader' => ['strShipmentNo' => 'D12345678', 'strStatus' => 'Delivered'], 'trackDetails' => [['strCode' => 'DLV', 'strAction' => 'Delivered', 'strActionDate' => '02102026', 'strActionTime' => '1130', 'strOrigin' => 'Bengaluru'], ['strCode' => 'BKD', 'strAction' => 'Booked', 'strActionDate' => '01102026', 'strActionTime' => '1700', 'strOrigin' => 'Mumbai']]])),
+                str_ends_with($path, '/getTrackDetails') => new MockResponse(json_encode($this->trackDetails ?? ['statusFlag' => true, 'trackHeader' => ['strShipmentNo' => 'D12345678', 'strStatus' => 'Delivered'], 'trackDetails' => [['strCode' => 'DLV', 'strAction' => 'Delivered', 'strActionDate' => '02102026', 'strActionTime' => '1130', 'strOrigin' => 'Bengaluru'], ['strCode' => 'BKD', 'strAction' => 'Booked', 'strActionDate' => '01102026', 'strActionTime' => '1700', 'strOrigin' => 'Mumbai']]])),
                 default => new MockResponse(json_encode(['status' => 'ERROR', 'error' => 'No such resource']), ['http_code' => 404]),
             };
         });
@@ -66,5 +68,23 @@ final class DtdcGatewayTest extends TestCase
 
         $this->expectException(\Omnibus\Exception\RequestNotSupportedException::class); // without its option, not offered
         $this->gateway(false)->track('D12345678');
+    }
+
+    /**
+     * A consignment DTDC could not deliver: code NDL or UND, words "Not Delivered" or
+     * "Undelivered" (DTDC's tracking API, getTrackDetails' strCode and strAction), an exception.
+     */
+    public function testANotDeliveredConsignmentIsAnException(): void
+    {
+        $this->trackDetails = ['statusFlag' => true, 'trackHeader' => ['strShipmentNo' => 'D12345678', 'strStatus' => 'Not Delivered'], 'trackDetails' => [
+            ['strCode' => 'UND', 'strAction' => 'Undelivered - Address incomplete', 'strActionDate' => '03102026', 'strActionTime' => '1015', 'strOrigin' => 'Bengaluru'],
+            ['strCode' => 'NDL', 'strAction' => 'Not Delivered - Consignee not available', 'strActionDate' => '02102026', 'strActionTime' => '1130', 'strOrigin' => 'Bengaluru'],
+            ['strCode' => 'BKD', 'strAction' => 'Booked', 'strActionDate' => '01102026', 'strActionTime' => '1700', 'strOrigin' => 'Mumbai'],
+        ]];
+        $tracking = $this->gateway()->track('D12345678');
+        self::assertSame(TrackingStatus::EXCEPTION, $tracking->status);
+        self::assertSame(TrackingStatus::EXCEPTION, $tracking->events[1]->status);
+        self::assertSame(TrackingStatus::EXCEPTION, $tracking->events[2]->status);
+        self::assertSame(TrackingStatus::PENDING, $tracking->events[0]->status);
     }
 }

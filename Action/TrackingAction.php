@@ -45,16 +45,25 @@ final class TrackingAction implements ActionInterface, ApiAwareInterface
         $request->setResult(new TrackingModel('dtdc', $request->trackingNumber, $status, $events));
     }
 
+    /**
+     * DTDC's code decides first; without a known code, the words, the negative ones ("not
+     * delivered", "undelivered") before "delivered", which they contain.
+     */
     private static function status(?string $code, ?string $action): TrackingStatus
     {
         $a = strtolower((string) $action);
 
         return match (true) {
-            'DLV' === $code || str_contains($a, 'delivered') => TrackingStatus::DELIVERED,
-            'OFD' === $code || str_contains($a, 'out for delivery') => TrackingStatus::OUT_FOR_DELIVERY,
-            'RTO' === $code || str_contains($a, 'return') => TrackingStatus::RETURNED,
-            \in_array($code, ['NDL', 'UND'], true) || str_contains($a, 'not delivered') || str_contains($a, 'undelivered') => TrackingStatus::EXCEPTION,
-            'BKD' === $code || str_contains($a, 'booked') || str_contains($a, 'softdata') => TrackingStatus::PENDING,
+            'DLV' === $code => TrackingStatus::DELIVERED,
+            \in_array($code, ['NDL', 'UND'], true) => TrackingStatus::EXCEPTION,
+            'OFD' === $code => TrackingStatus::OUT_FOR_DELIVERY,
+            'RTO' === $code => TrackingStatus::RETURNED,
+            'BKD' === $code => TrackingStatus::PENDING,
+            str_contains($a, 'not delivered') || str_contains($a, 'undelivered') => TrackingStatus::EXCEPTION,
+            str_contains($a, 'delivered') => TrackingStatus::DELIVERED,
+            str_contains($a, 'out for delivery') => TrackingStatus::OUT_FOR_DELIVERY,
+            str_contains($a, 'return') => TrackingStatus::RETURNED,
+            str_contains($a, 'booked') || str_contains($a, 'softdata') => TrackingStatus::PENDING,
             null !== $code && '' !== $code || '' !== $a => TrackingStatus::IN_TRANSIT,
             default => TrackingStatus::UNKNOWN,
         };
