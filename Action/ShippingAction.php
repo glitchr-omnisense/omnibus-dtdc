@@ -63,13 +63,16 @@ final class ShippingAction implements ActionInterface, ApiAwareInterface
         }
         $content = null;
         try {
-            $label = $this->api->call('GET', '/consignment/label', null, ['reference_number' => $number, 'label_code' => $s->option('label_code', 'SHIP_LABEL_4X6'), 'label_format' => 'pdf']);
-            $encoded = $label['data'][0]['label'] ?? $label['data'] ?? $label['label'] ?? null;
-            $content = \is_string($encoded) ? base64_decode($encoded) : null;
+            $content = GetSlipAction::fetch($this->api, $number, (string) $s->option('label_code', 'SHIP_LABEL_4X6'));
         } catch (CarrierException) {
-            // GetSlip asks again
+            // The consignment is booked; slip() fetches its label again.
         }
-        $request->setResult(new Label('dtdc', $number, $content, Label::PDF, null, 'https://www.dtdc.in/trace.asp?strCnno='.rawurlencode($number)));
+        $request->setResult(new Label('dtdc', $number, $content, Label::PDF, null, self::trackingUrl($number)));
+    }
+
+    public static function trackingUrl(string $number): string
+    {
+        return 'https://www.dtdc.in/trace.asp?strCnno='.rawurlencode($number);
     }
 
     private static function party(Address $a): array

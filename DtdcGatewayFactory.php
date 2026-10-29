@@ -4,6 +4,7 @@ namespace Omnibus\Dtdc;
 
 use Omnibus\Config;
 use Omnibus\Dtdc\Action\CancelAction;
+use Omnibus\Dtdc\Action\GetSlipAction;
 use Omnibus\Dtdc\Action\ShippingAction;
 use Omnibus\Dtdc\Action\TrackingAction;
 use Omnibus\GatewayFactory;
@@ -39,6 +40,7 @@ final class DtdcGatewayFactory extends GatewayFactory
             'omnibus.action.shipping' => new ShippingAction(),
             'omnibus.action.tracking' => static fn (Config $c) => $c['tracking_username'] && $c['tracking_password'] ? new TrackingAction() : null, // the tracking API has a login of its own
             'omnibus.action.cancel' => new CancelAction(),
+            'omnibus.action.get_slip' => new GetSlipAction(),
         ]);
     }
 }

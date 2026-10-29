@@ -87,4 +87,13 @@ final class DtdcGatewayTest extends TestCase
         self::assertSame(TrackingStatus::EXCEPTION, $tracking->events[2]->status);
         self::assertSame(TrackingStatus::PENDING, $tracking->events[0]->status);
     }
+
+    /** DTDC's label is fetched by the consignment's reference number (GET /consignment/label): slip() fetches it again, as ship() does. */
+    public function testALabelIsFetchedAgain(): void
+    {
+        $label = $this->gateway()->slip('D12345678');
+        self::assertSame('D12345678', $label->trackingNumber);
+        self::assertSame('%PDF-1.4 dtdc', $label->content);
+        self::assertStringContainsString('reference_number=D12345678', end($this->calls)[1]);
+    }
 }

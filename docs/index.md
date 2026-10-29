@@ -63,7 +63,7 @@ Shipment options read when booking (`Shipment::$options`):
 | `Shipping` | yes |
 | `Tracking` | only with `tracking_username` and `tracking_password` |
 | `Pickup` | no: DTDC delivers to the door |
-| `GetSlip` | no |
+| `GetSlip` | yes: the label again, by the consignment's number (label code `SHIP_LABEL_4X6`, PDF) |
 | `Cancel` | yes |
 | `Paperless` | no |
 
@@ -86,8 +86,8 @@ Shipment options read when booking (`Shipment::$options`):
 A consignment answered with `success` false raises its `message` (else `reason`). The tracking
 number is the `reference_number` DTDC returns. Then `GET /consignment/label` for that number, the
 `label_code` and the PDF format: the label returned (base64) is the label's `content`. When that
-request fails, the booking still succeeds without content (a comment in `ShippingAction` says
-`GetSlip` asks again; `GetSlip` is not supported). The format is `application/pdf`; `trackingUrl`
+request fails, the booking still succeeds without content: `slip()` fetches the label again. The
+format is `application/pdf`; `trackingUrl`
 is `https://www.dtdc.in/trace.asp?strCnno=<number>`. `pickupPoint` is not sent.
 
 **Track.** The first tracking call of a gateway asks for an access token with the tracking
@@ -118,6 +118,10 @@ then, for any other code or none, the text, in this order:
 | neither a code nor a text | `UNKNOWN` |
 
 "not delivered" and "undelivered" are read before "delivered", which they contain.
+
+**Slip.** `GET /consignment/label` for the number, label code `SHIP_LABEL_4X6`, PDF (whatever
+format is asked: DTDC prints PDF): the label again, with the same `trackingUrl`. No label in the
+answer is a `CarrierException` (`DTDC gave no label for <number>.`).
 
 **Cancel.** `POST /consignment/cancel` with the number and the customer code: `true` when no
 number is listed as failed and the status is `OK` (or absent).
@@ -204,7 +208,7 @@ Every failure is an `Omnibus\Exception\CarrierException` whose `carrier` is `dtd
 
 A failed label request after the consignment is booked is not raised (above). A missing `api_key`
 or `customer_code` is an `InvalidConfigException` when the gateway is built; `Tracking` without
-its login, `Pickup`, `GetSlip`, `Paperless`, and `Rating` without `rates`, raise
+its login, `Pickup`, `Paperless`, and `Rating` without `rates`, raise
 `RequestNotSupportedException` before any call.
 
 ## Verified, and not
