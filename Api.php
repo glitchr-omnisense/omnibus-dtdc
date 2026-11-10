@@ -4,6 +4,8 @@ namespace Omnibus\Dtdc;
 
 use Omnibus\Exception\CarrierException;
 use Omnibus\Http\Redaction;
+use Omnibus\Http\Throttle;
+use Omnisense\Contracts\Policy\Backoff;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -29,6 +31,8 @@ final class Api
         public readonly ?string $trackingPassword = null,
         public readonly bool $sandbox = false,
         private readonly int $timeout = 20,
+        /** The waits the carrier asks for (omnisense/contracts' Backoff): no call while one lasts, a 429 a RateLimitedException, never retried */
+        private readonly ?Backoff $backoff = null,
     ) {
     }
 
@@ -36,6 +40,7 @@ final class Api
     public function call(string $method, string $path, ?array $body = null, array $query = []): array
     {
         try {
+            Throttle::before($this->backoff);
             $response = $this->http->request($method, ($this->sandbox ? self::TEST : self::LIVE).$path, [
                 'headers' => ['api-key' => $this->apiKey, 'Content-Type' => 'application/json', 'Accept' => 'application/json'],
                 'query' => $query,
@@ -43,6 +48,7 @@ final class Api
                 'timeout' => $this->timeout,
             ]);
             $status = $response->getStatusCode();
+            Throttle::after($this->backoff, 'dtdc', $status, $response->getHeaders(false));
             $data = json_decode($response->getContent(false), true);
         } catch (HttpExceptionInterface|\JsonException $e) {
             $secrets = $this->secrets();
@@ -67,14 +73,17 @@ final class Api
         }
         try {
             if (null === $this->trackingToken) {
+                Throttle::before($this->backoff);
                 $login = $this->http->request('GET', self::TRACKING_TOKEN, ['query' => ['username' => $this->trackingUsername, 'password' => $this->trackingPassword], 'timeout' => $this->timeout]);
                 if ($login->getStatusCode() >= 400) {
                     throw Redaction::withoutArguments(new CarrierException('dtdc', sprintf('DTDC gave no tracking token (HTTP %d): check the tracking username and password.', $login->getStatusCode())));
                 }
                 $this->trackingToken = trim($login->getContent(false));
             }
+            Throttle::before($this->backoff);
             $response = $this->http->request('POST', self::TRACKING, ['headers' => ['X-Access-Token' => $this->trackingToken, 'Content-Type' => 'application/json'], 'body' => json_encode(['trkType' => 'cnno', 'strcnno' => $number, 'addtnlDtl' => 'Y']), 'timeout' => $this->timeout]);
             $status = $response->getStatusCode();
+            Throttle::after($this->backoff, 'dtdc', $status, $response->getHeaders(false));
             $data = $response->toArray(false);
         } catch (HttpExceptionInterface $e) {
             $secrets = $this->secrets();

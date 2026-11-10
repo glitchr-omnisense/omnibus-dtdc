@@ -28,6 +28,7 @@ final class DtdcGatewayFactory extends GatewayFactory
         $config->defaults([
             'omnibus.factory_name' => 'dtdc',
             'omnibus.factory_title' => 'DTDC',
+            'omnibus.policy' => __DIR__.'/policy.json',
             'omnibus.required_options' => ['api_key', 'customer_code'],
             'tracking_username' => null,
             'tracking_password' => null,
@@ -35,7 +36,7 @@ final class DtdcGatewayFactory extends GatewayFactory
             'omnibus.api' => function (Config $c) {
                 $http = $this->http ?? HttpClient::create();
 
-                return new Api($http, (string) $c['api_key'], (string) $c['customer_code'], $c['tracking_username'] ?: null, $c['tracking_password'] ?: null, (bool) $c['sandbox']);
+                return new Api($http, (string) $c['api_key'], (string) $c['customer_code'], $c['tracking_username'] ?: null, $c['tracking_password'] ?: null, (bool) $c['sandbox'], backoff: $c->backoff());
             },
             'omnibus.action.shipping' => new ShippingAction(),
             'omnibus.action.tracking' => static fn (Config $c) => $c['tracking_username'] && $c['tracking_password'] ? new TrackingAction() : null, // the tracking API has a login of its own
