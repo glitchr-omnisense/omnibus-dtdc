@@ -5,6 +5,43 @@ labels and cancellation through DTDC's customer integration API (an api-key), tr
 DTDC's tracking API (its own login). Prices come from configuration (`rates`): DTDC quotes by
 contract.
 
+## Install and a first call
+
+```sh
+composer require omnibus/dtdc
+```
+
+No account for this first call: DTDC's answer is recorded (`Omnibus\Testing\RecordedHttpClient`
+answers in place of the API), so nothing leaves the process. With your own credentials, give the
+factory your HTTP client (or none: it makes its own) and drop the recorded one.
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Omnibus\Dtdc\DtdcGatewayFactory;
+use Omnibus\Testing\RecordedHttpClient;
+
+// DTDC's answer, recorded: no account, and nothing leaves the process.
+$http = new RecordedHttpClient([
+    '/authenticate' => 'tracking-token',
+    '/getTrackDetails' => ['statusFlag' => true, 'trackHeader' => ['strShipmentNo' => 'D12345678', 'strStatus' => 'Delivered'], 'trackDetails' => [
+        ['strCode' => 'DLV', 'strAction' => 'Delivered', 'strActionDate' => '02102026', 'strActionTime' => '1130', 'strOrigin' => 'Bengaluru'],
+    ]],
+]);
+$gateway = (new DtdcGatewayFactory($http))->create(['api_key' => 'key', 'customer_code' => 'GL001', 'sandbox' => true, 'tracking_username' => 'tu', 'tracking_password' => 'tp']);
+
+$tracking = $gateway->track('D12345678');
+echo $tracking->status->value, ' - ', $tracking->latest()?->description, "\n";   // delivered - Delivered
+```
+
+A real call needs a DTDC account (the credentials below). **Unverified**: the request and answer
+shapes come from DTDC's published documentation, and the package has not been run against its
+service.
+
+## Configuration
+
 ```php
 $gateway = (new DtdcGatewayFactory($http))->create($options);   // $http: the application's HTTP client - none given, the factory makes its own; the options below
 ```
